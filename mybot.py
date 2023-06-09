@@ -1,18 +1,23 @@
 import os
+
 from dotenv import load_dotenv
-import instaloader
+from instaloader import Instaloader
 
 from aiogram import Bot, Dispatcher, executor, types, filters
 
 load_dotenv()
-
-inst = instaloader.Instaloader()
 
 bot = Bot(token=os.getenv('API_TOKEN'))
 dp = Dispatcher(bot)
 
 username = os.getenv('username')
 password = os.getenv('pass')
+
+# НАСТРОЙКИ ИНСТАЛОДЕРА
+inst = Instaloader()
+# inst.download_geotags = False
+# inst.download_comments = False
+# inst.save_metadata = False
 
 kb_open_close = types.ReplyKeyboardMarkup(resize_keyboard=True)
 b1 = types.KeyboardButton(text='Открытый')
@@ -60,6 +65,7 @@ kb_acc_post.add(acc_b1, acc_b2)
 @dp.message_handler(filters.Text(contains='::'))
 async def process_upass(message: types.Message):
     username, password = message.text.split('::')
+    inst.login(f'{username}', f'{password}')
     await message.reply('Логин и пароль сохранены. Выберите что скачивать: ', reply_markup=kb_acc_post)
 
 
@@ -68,15 +74,24 @@ async def check_private_ac(message: types.Message):
     await message.reply("Отправьте ссылку на пост: ", reply_markup=types.ReplyKeyboardRemove())
 
 
+@dp.message_handler(filters.Text(equals='Аккаунт'))
+async def check_private_ac(message: types.Message):
+    await message.reply("Отправьте ссылку на аккаунт: ", reply_markup=types.ReplyKeyboardRemove())
+
+
 @dp.message_handler(filters.Text(contains='instagram.com/'))
 async def process_upass(message: types.Message):
+    message.text = message.text[:-1] if message.text.endswith('/') else message.text
     if '/p/' in message.text:
         link = message.text.split('/p/')[1]
-        p = inst.download_post(link)
+        p = inst.download_post(link, os.path())  # ДОДЕЛАТЬ!!!!!!!!!!!!!!!!!!!!!!!
     else:
-        link = message.text.split('instagram.com/')[1][:-1]
-        inst.download_profile(link)
-        await message.reply('OK')
+        link = message.text.split('instagram.com/')[1]
+        try:
+            inst.download_profile(link)
+            await message.reply('OK')
+        except Exception:  # ВЫБРАТЬ НУЖНУЮ ОШИБКУ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            await message.reply('Необходима авторизация!')
 
 
 if __name__ == '__main__':
